@@ -1,50 +1,118 @@
+from rest_framework.permissions import IsAuthenticated
+
 from django.contrib.auth import get_user_model
-# from django.contrib.auth.tokens import default_token_generator
-from rest_framework import permissions, status, viewsets
-# from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from .serializers import UserAvatarSerializer
+from .models import Subscription
+
+from rest_framework import status
+from rest_framework.generics import ListAPIView
+from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import RetrieveUpdateDestroyAPIView
+
+from .serializers import UserWithRecipesSerializer
+from rest_framework.pagination import LimitOffsetPagination
+from djoser.views import UserViewSet as DjoserUserViewSet
+from rest_framework.decorators import action
 
 
 User = get_user_model()
 
 
-class SignUpView(APIView):
-    """Эндпоинт регистрации."""
+class UserViewSet(DjoserUserViewSet):
+    """Djoser-пользователи плюс экшены подписок."""
 
-    pass
-    # permission_classes = (permissions.AllowAny,)
+    @action(detail=True, methods=('post', 'delete'),
+            permission_classes=(IsAuthenticated,))
+    def subscribe(self, request, id=None):
+        author = get_object_or_404(User, pk=id)
 
-    # def post(self, request):
-    #     serializer = SignUpSerializer(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-    #     user = serializer.save()
+        if request.method == 'POST':
+            if request.user == author:
+                return Response(
+                    {'detail': 'Нельзя подписаться на себя'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if Subscription.objects.filter(
+                    user=request.user, author=author).exists():
+                return Response(
+                    {'detail': 'Вы уже подписаны на этого пользователя'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            Subscription.objects.create(user=request.user, author=author)
+            serializer = UserWithRecipesSerializer(
+                author, context={'request': request}
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    #     code = default_token_generator.make_token(user)
-    #     send_confirmation_email(user.email, code)
+        deleted, _ = Subscription.objects.filter(
+            user=request.user, author_id=id
+        ).delete()
+        if not deleted:
+            return Response(
+                {'detail': 'Вы не подписаны на этого пользователя'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-    #     return Response(
-    #         {'email': user.email, 'username': user.username},
-    #         status=status.HTTP_200_OK,
-    #     )
+    @action(detail=False, permission_classes=(IsAuthenticated,))
+    def subscriptions(self, request):
+        self.pagination_class = LimitOffsetPagination
+        queryset = User.objects.filter(followers__user=request.user)
+        page = self.paginate_queryset(queryset)
+        serializer = UserWithRecipesSerializer(
+            page, many=True, context={'request': request}
+        )
+        return self.get_paginated_response(serializer.data)
 
 
-class TokenView(APIView):
-    """Эндпоинт получения токена."""
-    pass
-    # permission_classes = (permissions.AllowAny,)
+class UserAvatarView(RetrieveUpdateDestroyAPIView):
+    serializer_class = UserAvatarSerializer
+    permission_classes = [IsAuthenticated]
 
-    # def post(self, request):
-    #     serializer = TokenSerializer(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-    #     return Response({'token': serializer.validated_data['token']})
+    def get_object(self):
+        return self.request.user
+
+    def perform_destroy(self, instance):
+        instance.avatar = None
+        instance.save(update_fields=['avatar'])
 
 
-class UserViewSet(viewsets.ModelViewSet):
-    """API для управления пользователями (только админ)."""
-    pass
-    # queryset = User.objects.all().order_by('username')
-    # serializer_class = UserSerializer
-    # permission_classes = (IsAdmin,)
-    # search_fields = ('username',)
-    # lookup_field = 'username'
-    # http_method_names = ['get', 'post', 'patch', 'delete']
+# class SubscribeView(APIView):
+#     permission_classes = (IsAuthenticated,)
+
+#     def post(self, request, pk):
+#         author = get_object_or_404(User, pk=pk)
+#         if request.user == author:
+#             return Response({'detail': 'Нельзя подписаться на себя'},
+#                             status=status.HTTP_400_BAD_REQUEST)
+#         _, created = Subscription.objects.get_or_create(
+#             user=request.user, author=author
+#         )
+#         if not created:
+#             return Response({'detail': 'Вы уже подписаны'},
+#                             status=status.HTTP_400_BAD_REQUEST)
+#         serializer = UserWithRecipesSerializer(author, context={'request': request})
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+#     def delete(self, request, pk):
+#         author = get_object_or_404(User, pk=pk)
+#         deleted, _ = Subscription.objects.filter(
+#             user=request.user, author=author
+#         ).delete()
+#         if not deleted:
+#             return Response(
+#                 {'detail': 'Вы не подписаны на этого пользователя'},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+#         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# class SubscriptionsListView(ListAPIView):
+#     serializer_class = UserWithRecipesSerializer
+#     permission_classes = (IsAuthenticated,)
+#     pagination_class = LimitOffsetPagination
+
+#     def get_queryset(self):
+#         return User.objects.filter(followers__user=self.request.user)

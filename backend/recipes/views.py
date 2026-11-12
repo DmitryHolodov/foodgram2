@@ -1,3 +1,115 @@
-from django.shortcuts import render
+from rest_framework import filters, viewsets
+from .filters import RecipeFilter, IngredientFilter
+import base64
+from .utils import AddDeleteRelationMixin
+from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from rest_framework.response import Response
+from django.http import HttpResponseRedirect
+from rest_framework import status
+from rest_framework.decorators import action
+from .permissions import IsAuthorAdminOrReadOnly
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
+from .models import Tag, Recipe, Ingredient, Favorite, ShoppingCart, IngredientAmount
+from .serializers import TagSerializer
+from .serializers import RecipeReadSerializer, RecipeWriteSerializer, IngredientSerializer
+from rest_framework.pagination import LimitOffsetPagination
+from django.http import HttpResponse
+from django.db.models import Sum
 
-# Create your views here.
+
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    pagination_class = None
+
+
+class RecipeViewSet(AddDeleteRelationMixin, viewsets.ModelViewSet):
+    queryset = Recipe.objects.all()
+    pagination_class = LimitOffsetPagination
+    permission_classes = (IsAuthorAdminOrReadOnly,)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter 
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return RecipeReadSerializer
+        return RecipeWriteSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+    @action(methods=['get'], detail=True, url_path='get-link')
+    def get_link(self, request, pk=None):
+        recipe = self.get_object()
+        code = base64.b64encode(str(recipe.id).encode()).decode()
+        short_link = request.build_absolute_uri(f'/s/{code}/')
+        return Response({'short-link': short_link}, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=('post', 'delete'),
+        permission_classes=(IsAuthenticated,)
+    )
+    def favorite(self, request, pk=None):
+        return self.add_delete_relation(
+            request, pk, Favorite,
+            'Рецепт уже в избранном',
+            'Рецепта нет в избранном'
+        )
+
+    @action(detail=True, methods=('post', 'delete'),
+            permission_classes=(IsAuthenticated,))
+    def shopping_cart(self, request, pk=None):
+        return self.add_delete_relation(
+            request, pk, ShoppingCart,
+            'Рецепт уже в списке покупок',
+            'Рецепта нет в списке покупок'
+        )
+
+    @action(
+        detail=False,
+        methods=('get',),
+        permission_classes=(IsAuthenticated,)
+    )
+    def download_shopping_cart(self, request):
+        ingredients = (
+            IngredientAmount.objects
+            .filter(recipe__shopping_cart__user=request.user)
+            .values('ingredient__name', 'ingredient__measurement_unit')
+            .annotate(total=Sum('amount'))
+            .order_by('ingredient__name')
+        )
+
+        lines = ['Список покупок:', '']
+        for item in ingredients:
+            name = item['ingredient__name']
+            unit = item['ingredient__measurement_unit']
+            lines.append(f'{name} ({unit}) — {item["total"]}')
+
+        content = '\n'.join(lines)
+        response = HttpResponse(content, content_type='text/plain')
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_list.txt"'
+        )
+        return response
+
+
+class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = IngredientFilter
+    pagination_class = None
+
+
+class ShortLinkRedirectView(APIView):
+
+    def get(self, request, code):
+        recipe_id = int(base64.b64decode(code))
+        recipe = get_object_or_404(Recipe, pk=recipe_id)
+        return HttpResponseRedirect(
+            reverse('recipes-detail', args=[recipe.id])
+        )
