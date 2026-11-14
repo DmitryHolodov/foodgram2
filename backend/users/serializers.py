@@ -7,6 +7,7 @@ User = get_user_model()
 
 
 class UserAvatarSerializer(serializers.ModelSerializer):
+    """Обновляет аватар текущего пользователя."""
     avatar = Base64ImageField(required=True, allow_null=True)
 
     class Meta:
@@ -15,6 +16,7 @@ class UserAvatarSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    """Сериализует пользователя с вычисляемым полем is_subscribed."""
     is_subscribed = serializers.SerializerMethodField()
     avatar = Base64ImageField(required=False, allow_null=True)
 
@@ -31,6 +33,7 @@ class UserSerializer(serializers.ModelSerializer):
         )
 
     def get_is_subscribed(self, obj):
+        """Проверяет, подписан ли текущий пользователь на автора."""
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
@@ -38,6 +41,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class SignUpSerializer(serializers.ModelSerializer):
+    """Регистрирует пользователя с хешированием пароля."""
     password = serializers.CharField(write_only=True)
 
     class Meta:
@@ -52,6 +56,7 @@ class SignUpSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
+        """Создаёт пользователя через create_user с хешированным паролем."""
         password = validated_data.pop('password')
         user = User.objects.create_user(password=password, **validated_data)
         return user
@@ -66,6 +71,7 @@ class RecipeShortSerializer(serializers.ModelSerializer):
 
 
 class UserWithRecipesSerializer(UserSerializer):
+    """Список пользователя-автора с его рецептами и их числом."""
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
@@ -73,6 +79,7 @@ class UserWithRecipesSerializer(UserSerializer):
         fields = UserSerializer.Meta.fields + ('recipes', 'recipes_count')
 
     def get_recipes(self, obj):
+        """Отдаёт рецепты автора с учётом параметра recipes_limit."""
         request = self.context.get('request')
         limit = request.query_params.get('recipes_limit') if request else None
         queryset = obj.recipes.all()
@@ -81,4 +88,5 @@ class UserWithRecipesSerializer(UserSerializer):
         return RecipeShortSerializer(queryset, many=True, context=self.context).data
 
     def get_recipes_count(self, obj):
+        """Возвращает число рецептов автора."""
         return obj.recipes.count()

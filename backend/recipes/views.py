@@ -21,12 +21,14 @@ from django.db.models import Sum
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    """Отдаёт список тегов без пагинации."""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
 
 
 class RecipeViewSet(AddDeleteRelationMixin, viewsets.ModelViewSet):
+    """CRUD рецептов, избранное, корзина и выгрузка списка покупок."""
     queryset = Recipe.objects.all()
     pagination_class = LimitOffsetPagination
     permission_classes = (IsAuthorAdminOrReadOnly,)
@@ -34,15 +36,18 @@ class RecipeViewSet(AddDeleteRelationMixin, viewsets.ModelViewSet):
     filterset_class = RecipeFilter 
 
     def get_serializer_class(self):
+        """Выбирает сериализатор чтения или записи в зависимости от метода."""
         if self.request.method == 'GET':
             return RecipeReadSerializer
         return RecipeWriteSerializer
 
     def perform_create(self, serializer):
+        """Сохраняет рецепт с текущим пользователем в качестве автора."""
         serializer.save(author=self.request.user)
 
     @action(methods=['get'], detail=True, url_path='get-link')
     def get_link(self, request, pk=None):
+        """Возвращает короткую ссылку на рецепт в base64-кодировке."""
         recipe = self.get_object()
         code = base64.b64encode(str(recipe.id).encode()).decode()
         short_link = request.build_absolute_uri(f'/s/{code}/')
@@ -54,6 +59,7 @@ class RecipeViewSet(AddDeleteRelationMixin, viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def favorite(self, request, pk=None):
+        """Добавляет рецепт в избранное или удаляет из него."""
         return self.add_delete_relation(
             request, pk, Favorite,
             'Рецепт уже в избранном',
@@ -63,6 +69,7 @@ class RecipeViewSet(AddDeleteRelationMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=('post', 'delete'),
             permission_classes=(IsAuthenticated,))
     def shopping_cart(self, request, pk=None):
+        """Добавляет рецепт в корзину или удаляет из неё."""
         return self.add_delete_relation(
             request, pk, ShoppingCart,
             'Рецепт уже в списке покупок',
@@ -75,6 +82,7 @@ class RecipeViewSet(AddDeleteRelationMixin, viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def download_shopping_cart(self, request):
+        """Отдаёт файл с суммой ингредиентов из корзины пользователя."""
         ingredients = (
             IngredientAmount.objects
             .filter(recipe__shopping_cart__user=request.user)
@@ -98,6 +106,7 @@ class RecipeViewSet(AddDeleteRelationMixin, viewsets.ModelViewSet):
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    """Отдаёт справочник ингредиентов с фильтром по началу названия."""
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     filter_backends = (DjangoFilterBackend,)
@@ -106,6 +115,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class ShortLinkRedirectView(APIView):
+    """Перенаправляет с короткой ссылки на страницу рецепта."""
 
     def get(self, request, code):
         recipe_id = int(base64.b64decode(code))

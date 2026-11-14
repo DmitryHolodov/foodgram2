@@ -5,8 +5,6 @@ class IsAuthorAdminOrReadOnly(BasePermission):
     """Записывать может только автор объекта или админ; читать — все."""
 
     def has_permission(self, request, view):
-        # список и детальный просмотр — открыты всем,
-        # а POST/PUT/PATCH/DELETE — только авторизованным
         return (request.method in SAFE_METHODS
                 or request.user.is_authenticated)
 

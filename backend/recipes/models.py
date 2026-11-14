@@ -12,6 +12,7 @@ User = get_user_model()
 
 
 class Tag(models.Model):
+    """Метка рецепта с уникальным slug"""
     name = models.CharField(
         'Название',
         max_length=MAX_SLUG_LENGTH,
@@ -32,6 +33,7 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
+    """Справочник ингредиентов: название и единица измерения."""
     name = models.CharField(
         'Ингредиент',
         max_length=MAX_INGREDIENT_NAME_LENGTH
@@ -56,6 +58,7 @@ class Ingredient(models.Model):
 
 
 class Recipe(models.Model):
+    """Рецепт с автором, текстом, картинкой и временем приготовления."""
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -95,6 +98,7 @@ class Recipe(models.Model):
 
 
 class IngredientAmount(models.Model):
+    """Промежуточная модель «рецепт — ингредиент» с количеством."""
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
@@ -126,6 +130,7 @@ class IngredientAmount(models.Model):
 
 
 class Favorite(models.Model):
+    """Отметка «в избранном»: пара пользователь — рецепт, без дублей."""
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -150,6 +155,7 @@ class Favorite(models.Model):
 
 
 class ShoppingCart(models.Model):
+    """Корзина покупок: пара пользователь — рецепт для выгрузки списка."""
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

@@ -9,7 +9,7 @@ from .validators import validate_username
 
 
 class User(AbstractUser):
-    """Кастомная модель пользователя."""
+    """Пользователь с email в качестве имени входа, аватаром и подписками."""
     username = models.CharField(
         max_length=MAX_USERNAME_LENGTH,
         unique=True,
@@ -53,7 +53,7 @@ class User(AbstractUser):
 
 
 class Subscription(models.Model):
-    """Модель подписок."""
+    """Связь «подписчик — автор» с уникальностью пары."""
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

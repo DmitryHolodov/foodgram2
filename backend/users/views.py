@@ -21,11 +21,12 @@ User = get_user_model()
 
 
 class UserViewSet(DjoserUserViewSet):
-    """Djoser-пользователи плюс экшены подписок."""
+    """Пользователи Djoser плюс подписки и смена аватара."""
 
     @action(detail=True, methods=('post', 'delete'),
             permission_classes=(IsAuthenticated,))
     def subscribe(self, request, id=None):
+        """Подписывает на автора или отписывает с проверкой повторов и себя."""
         author = get_object_or_404(User, pk=id)
 
         if request.method == 'POST':
@@ -58,6 +59,7 @@ class UserViewSet(DjoserUserViewSet):
 
     @action(detail=False, permission_classes=(IsAuthenticated,))
     def subscriptions(self, request):
+        """Отдаёт пагинированный список авторов, на которых подписан пользователь."""
         self.pagination_class = LimitOffsetPagination
         queryset = User.objects.filter(followers__user=request.user)
         page = self.paginate_queryset(queryset)
@@ -68,51 +70,15 @@ class UserViewSet(DjoserUserViewSet):
 
 
 class UserAvatarView(RetrieveUpdateDestroyAPIView):
+    """Показывает, обновляет и удаляет аватар текущего пользователя."""
     serializer_class = UserAvatarSerializer
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
+        """Возвращает текущего пользователя вместо объекта из URL."""
         return self.request.user
 
     def perform_destroy(self, instance):
+        """Обнуляет аватар, не удаляя самого пользователя."""
         instance.avatar = None
         instance.save(update_fields=['avatar'])
-
-
-# class SubscribeView(APIView):
-#     permission_classes = (IsAuthenticated,)
-
-#     def post(self, request, pk):
-#         author = get_object_or_404(User, pk=pk)
-#         if request.user == author:
-#             return Response({'detail': 'Нельзя подписаться на себя'},
-#                             status=status.HTTP_400_BAD_REQUEST)
-#         _, created = Subscription.objects.get_or_create(
-#             user=request.user, author=author
-#         )
-#         if not created:
-#             return Response({'detail': 'Вы уже подписаны'},
-#                             status=status.HTTP_400_BAD_REQUEST)
-#         serializer = UserWithRecipesSerializer(author, context={'request': request})
-#         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-#     def delete(self, request, pk):
-#         author = get_object_or_404(User, pk=pk)
-#         deleted, _ = Subscription.objects.filter(
-#             user=request.user, author=author
-#         ).delete()
-#         if not deleted:
-#             return Response(
-#                 {'detail': 'Вы не подписаны на этого пользователя'},
-#                 status=status.HTTP_400_BAD_REQUEST
-#             )
-#         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-# class SubscriptionsListView(ListAPIView):
-#     serializer_class = UserWithRecipesSerializer
-#     permission_classes = (IsAuthenticated,)
-#     pagination_class = LimitOffsetPagination
-
-#     def get_queryset(self):
-#         return User.objects.filter(followers__user=self.request.user)
