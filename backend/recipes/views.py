@@ -1,27 +1,39 @@
-from rest_framework import filters, viewsets
-from .filters import RecipeFilter, IngredientFilter
 import base64
-from .utils import AddDeleteRelationMixin
-from rest_framework.views import APIView
+
+from django.db.models import Sum
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from rest_framework.response import Response
-from django.http import HttpResponseRedirect
-from rest_framework import status
-from rest_framework.decorators import action
-from .permissions import IsAuthorAdminOrReadOnly
-from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Tag, Recipe, Ingredient, Favorite, ShoppingCart, IngredientAmount
-from .serializers import TagSerializer
-from .serializers import RecipeReadSerializer, RecipeWriteSerializer, IngredientSerializer
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
-from django.http import HttpResponse
-from django.db.models import Sum
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .filters import IngredientFilter, RecipeFilter
+from .models import (
+    Favorite,
+    Ingredient,
+    IngredientAmount,
+    Recipe,
+    ShoppingCart,
+    Tag,
+)
+from .permissions import IsAuthorAdminOrReadOnly
+from .serializers import (
+    IngredientSerializer,
+    RecipeReadSerializer,
+    RecipeWriteSerializer,
+    TagSerializer,
+)
+from .utils import AddDeleteRelationMixin
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     """Отдаёт список тегов без пагинации."""
+
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
@@ -29,11 +41,12 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RecipeViewSet(AddDeleteRelationMixin, viewsets.ModelViewSet):
     """CRUD рецептов, избранное, корзина и выгрузка списка покупок."""
+
     queryset = Recipe.objects.all()
     pagination_class = LimitOffsetPagination
     permission_classes = (IsAuthorAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = RecipeFilter 
+    filterset_class = RecipeFilter
 
     def get_serializer_class(self):
         """Выбирает сериализатор чтения или записи в зависимости от метода."""
@@ -107,6 +120,7 @@ class RecipeViewSet(AddDeleteRelationMixin, viewsets.ModelViewSet):
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     """Отдаёт справочник ингредиентов с фильтром по началу названия."""
+
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     filter_backends = (DjangoFilterBackend,)

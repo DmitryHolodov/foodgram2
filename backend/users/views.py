@@ -1,21 +1,15 @@
-from rest_framework.permissions import IsAuthenticated
-
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-from .serializers import UserAvatarSerializer
-from .models import Subscription
-
-from rest_framework import status
-from rest_framework.generics import ListAPIView
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.generics import RetrieveUpdateDestroyAPIView
-
-from .serializers import UserWithRecipesSerializer
-from rest_framework.pagination import LimitOffsetPagination
 from djoser.views import UserViewSet as DjoserUserViewSet
+from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.generics import RetrieveUpdateDestroyAPIView
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
+from .models import Subscription
+from .serializers import UserAvatarSerializer, UserWithRecipesSerializer
 
 User = get_user_model()
 
@@ -59,7 +53,7 @@ class UserViewSet(DjoserUserViewSet):
 
     @action(detail=False, permission_classes=(IsAuthenticated,))
     def subscriptions(self, request):
-        """Отдаёт пагинированный список авторов, на которых подписан пользователь."""
+        """Отдаёт список авторов, на которых подписан пользователь."""
         self.pagination_class = LimitOffsetPagination
         queryset = User.objects.filter(followers__user=request.user)
         page = self.paginate_queryset(queryset)
@@ -71,6 +65,7 @@ class UserViewSet(DjoserUserViewSet):
 
 class UserAvatarView(RetrieveUpdateDestroyAPIView):
     """Показывает, обновляет и удаляет аватар текущего пользователя."""
+
     serializer_class = UserAvatarSerializer
     permission_classes = [IsAuthenticated]
 

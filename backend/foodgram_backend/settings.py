@@ -1,5 +1,5 @@
-from pathlib import Path
 import os
+from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -9,13 +9,13 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-# SECRET_KEY = os.getenv( 
-#     'SECRET_KEY', 
-#     'dev-only-super-secret-key-for-ci-tests' 
-# ) 
- 
-# DEBUG = os.getenv('DEBUG', 'False') == 'True' 
- 
+# SECRET_KEY = os.getenv(
+#     'SECRET_KEY',
+#     'dev-only-super-secret-key-for-ci-tests'
+# )
+
+# DEBUG = os.getenv('DEBUG', 'False') == 'True'
+
 # ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
 
 AUTH_USER_MODEL = 'users.User'

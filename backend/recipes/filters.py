@@ -1,10 +1,11 @@
 import django_filters
 
-from .models import Recipe, Tag, Ingredient
+from .models import Ingredient, Recipe, Tag
 
 
 class RecipeFilter(django_filters.FilterSet):
     """Фильтрует рецепты по тегам, автору и связям «избранное/корзина»."""
+
     tags = django_filters.ModelMultipleChoiceFilter(
         field_name='tags__slug',
         to_field_name='slug',
@@ -40,6 +41,7 @@ class RecipeFilter(django_filters.FilterSet):
 
 class IngredientFilter(django_filters.FilterSet):
     """Фильтрует ингредиенты справочника по началу названия."""
+
     name = django_filters.CharFilter(
         field_name='name',
         lookup_expr='istartswith'

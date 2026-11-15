@@ -1,13 +1,15 @@
-from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from rest_framework import serializers
 
 from api.serializers import Base64ImageField
 from recipes.models import Recipe
+
 User = get_user_model()
 
 
 class UserAvatarSerializer(serializers.ModelSerializer):
     """Обновляет аватар текущего пользователя."""
+
     avatar = Base64ImageField(required=True, allow_null=True)
 
     class Meta:
@@ -17,6 +19,7 @@ class UserAvatarSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     """Сериализует пользователя с вычисляемым полем is_subscribed."""
+
     is_subscribed = serializers.SerializerMethodField()
     avatar = Base64ImageField(required=False, allow_null=True)
 
@@ -42,6 +45,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class SignUpSerializer(serializers.ModelSerializer):
     """Регистрирует пользователя с хешированием пароля."""
+
     password = serializers.CharField(write_only=True)
 
     class Meta:
@@ -72,6 +76,7 @@ class RecipeShortSerializer(serializers.ModelSerializer):
 
 class UserWithRecipesSerializer(UserSerializer):
     """Список пользователя-автора с его рецептами и их числом."""
+
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
@@ -85,7 +90,11 @@ class UserWithRecipesSerializer(UserSerializer):
         queryset = obj.recipes.all()
         if limit and limit.isdigit() and int(limit) > 0:
             queryset = queryset[:int(limit)]
-        return RecipeShortSerializer(queryset, many=True, context=self.context).data
+        return RecipeShortSerializer(
+            queryset,
+            many=True,
+            context=self.context
+        ).data
 
     def get_recipes_count(self, obj):
         """Возвращает число рецептов автора."""

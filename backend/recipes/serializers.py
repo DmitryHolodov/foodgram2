@@ -1,6 +1,7 @@
-from api.serializers import Base64ImageField
 from django.db import transaction
 from rest_framework import serializers
+
+from api.serializers import Base64ImageField
 from users.serializers import UserSerializer
 
 from .models import Ingredient, IngredientAmount, Recipe, Tag
@@ -20,6 +21,7 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 class IngredientInRecipeSerializer(serializers.ModelSerializer):
     """Показывает ингредиент в рецепте с количеством."""
+
     id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
     name = serializers.CharField(source='ingredient.name', read_only=True)
     measurement_unit = serializers.CharField(
@@ -33,6 +35,7 @@ class IngredientInRecipeSerializer(serializers.ModelSerializer):
 
 class TagSerializer(serializers.ModelSerializer):
     """Сериализует теги: id, name, slug."""
+
     class Meta:
         model = Tag
         fields = ('id', 'name', 'slug')
@@ -40,6 +43,7 @@ class TagSerializer(serializers.ModelSerializer):
 
 class RecipeReadSerializer(serializers.ModelSerializer):
     """Читает рецепт с тегами, автором, ингредиентами и флагами."""
+
     tags = TagSerializer(many=True, read_only=True)
     author = UserSerializer(read_only=True)
     ingredients = IngredientInRecipeSerializer(
@@ -50,8 +54,18 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('id', 'tags', 'author', 'ingredients', 'is_favorited',
-                  'is_in_shopping_cart', 'name', 'image', 'text', 'cooking_time')
+        fields = (
+            'id',
+            'tags',
+            'author',
+            'ingredients',
+            'is_favorited',
+            'is_in_shopping_cart',
+            'name',
+            'image',
+            'text',
+            'cooking_time'
+        )
 
     def get_is_favorited(self, obj):
         """Проверяет, в избранном ли рецепт у текущего пользователя."""
@@ -68,6 +82,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 
 class RecipeWriteSerializer(serializers.ModelSerializer):
     """Создаёт и обновляет рецепт с ингредиентами и тегами."""
+
     tags = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Tag.objects.all(),
     )
@@ -76,7 +91,15 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('id', 'tags', 'ingredients', 'name', 'image', 'text', 'cooking_time')
+        fields = (
+            'id',
+            'tags',
+            'ingredients',
+            'name',
+            'image',
+            'text',
+            'cooking_time'
+        )
 
     def validate(self, attrs):
         """Требует ингредиенты и теги при частичном обновлении."""
@@ -102,14 +125,20 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Нужен хотя бы один ингредиент.')
         ids = [item['id'] for item in value]
         if len(ids) != len(set(ids)):
-            raise serializers.ValidationError('Ингредиенты не должны повторяться.')
+            raise serializers.ValidationError(
+                'Ингредиенты не должны повторяться.'
+            )
         return value
 
     def _save_m2m(self, recipe, tags, ingredients):
         """Связывает рецепт с тегами и ингредиентами через bulk_create."""
         recipe.tags.set(tags)
         IngredientAmount.objects.bulk_create(
-            IngredientAmount(recipe=recipe, ingredient=item['id'], amount=item['amount'])
+            IngredientAmount(
+                recipe=recipe,
+                ingredient=item['id'],
+                amount=item['amount']
+            )
             for item in ingredients
         )
 

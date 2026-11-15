@@ -1,15 +1,18 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
 from foodgram_backend.constants import (
     MAX_EMAIL_LENGTH,
     MAX_NAME_LENGTH,
     MAX_USERNAME_LENGTH,
 )
+
 from .validators import validate_username
 
 
 class User(AbstractUser):
     """Пользователь с email в качестве имени входа, аватаром и подписками."""
+
     username = models.CharField(
         max_length=MAX_USERNAME_LENGTH,
         unique=True,
@@ -54,6 +57,7 @@ class User(AbstractUser):
 
 class Subscription(models.Model):
     """Связь «подписчик — автор» с уникальностью пары."""
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
