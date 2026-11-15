@@ -8,12 +8,15 @@ Django==6.1.2
 django-filter==24.3
 djangorestframework==3.18.3
 djangorestframework_simplejwt==5.5.1
+django-cors-headers==4.6.0
 djoser==2.3.5
 idna==3.20
 isort==9.0.2
+gunicorn==21.2.0
 mypy_extensions==1.2.0
 oauthlib==4.0.0
 pillow==12.3.0
+psycopg2-binary==2.9.11 
 pycparser==3.12
 PyJWT==2.15.1
 python3-openid==3.2.0
